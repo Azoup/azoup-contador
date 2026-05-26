@@ -1,0 +1,59 @@
+.azoup-day-picker {
+  --rdp-accent-color: var(--azoup-primary, #ff8b17);
+  --rdp-accent-background-color: color-mix(in srgb, var(--azoup-primary, #ff8b17) 18%, transparent);
+  --rdp-day-height: 36px;
+  --rdp-day-width: 36px;
+  font-size: 14px;
+}
+
+.azoup-day-picker .rdp-month_caption {
+  font-weight: 600;
+  color: var(--azoup-text, #0f0f41);
+}
+
+.azoup-day-picker .rdp-weekday {
+  color: var(--azoup-text-muted, #999);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.azoup-day-picker .rdp-day_button {
+  border-radius: 999px;
+  color: var(--azoup-text, #0f0f41);
+}
+
+.azoup-day-picker .rdp-day_button:hover:not([disabled]) {
+  background: var(--azoup-surface-variant, #f0f0f0);
+}
+
+.azoup-day-picker .rdp-selected .rdp-day_button {
+  background: var(--azoup-primary, #ff8b17);
+  color: #fff;
+  font-weight: 600;
+}
+
+.azoup-day-picker .rdp-range_start .rdp-day_button,
+.azoup-day-picker .rdp-range_end .rdp-day_button {
+  background: var(--azoup-primary, #ff8b17);
+  color: #fff;
+}
+
+.azoup-day-picker .rdp-range_middle .rdp-day_button {
+  background: var(--rdp-accent-background-color);
+  color: var(--azoup-text, #0f0f41);
+  border-radius: 0;
+}
+
+.azoup-day-picker .rdp-today:not(.rdp-selected) .rdp-day_button {
+  font-weight: 700;
+  color: var(--azoup-primary, #ff8b17);
+}
+
+.azoup-day-picker .rdp-chevron {
+  fill: var(--azoup-text-secondary, #666);
+}
+
+.azoup-day-picker .rdp-disabled .rdp-day_button {
+  opacity: 0.35;
+}
