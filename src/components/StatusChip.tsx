@@ -1,6 +1,3 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
-import { useTheme } from '@/contexts/ThemeContext';
 import type { StatusFilter } from '@/utils/nfeStatus';
 
 const LABELS: Record<StatusFilter, string> = {
@@ -16,44 +13,14 @@ type Props = {
 };
 
 export function StatusChip({ value, active, onPress }: Props) {
-  const { theme } = useTheme();
-  const isActive = value === active;
-
+  const isActive = active === value;
   return (
-    <Pressable
-      onPress={() => onPress(value)}
-      style={[
-        styles.chip,
-        isActive
-          ? { backgroundColor: theme.primary, borderColor: theme.primary }
-          : {
-              backgroundColor: theme.surfaceVariant,
-              borderColor: theme.border,
-            },
-      ]}
+    <button
+      type="button"
+      className={`chip ${isActive ? 'chip--active' : ''}`}
+      onClick={() => onPress(value)}
     >
-      <Text
-        style={[
-          styles.text,
-          { color: isActive ? '#FFFFFF' : theme.textSecondary },
-        ]}
-      >
-        {LABELS[value]}
-      </Text>
-    </Pressable>
+      {LABELS[value]}
+    </button>
   );
 }
-
-const styles = StyleSheet.create({
-  chip: {
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-    marginRight: 8,
-  },
-  text: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-});

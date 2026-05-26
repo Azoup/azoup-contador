@@ -1,15 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import {
-  Alert,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { useTheme } from '@/contexts/ThemeContext';
+import { Download, Printer } from 'lucide-react';
+import { useState } from 'react';
 import { downloadXml, openDanfe } from '@/services/nfeApi';
+import { useTheme } from '@/contexts/ThemeContext';
 import { formatDateBR, formatMoney } from '@/utils/masks';
 import { getStatusColor, getStatusLabel } from '@/utils/nfeStatus';
 import type { NotaEnriquecida } from '@/types';
@@ -22,13 +14,19 @@ export function NfeCard({ nota }: Props) {
   const { theme } = useTheme();
   const [loadingDanfe, setLoadingDanfe] = useState(false);
   const [loadingXml, setLoadingXml] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  };
 
   const handleDanfe = async () => {
     try {
       setLoadingDanfe(true);
       openDanfe(nota);
     } catch (e) {
-      Alert.alert('Erro', e instanceof Error ? e.message : 'Não foi possível abrir o DANFE.');
+      showToast(e instanceof Error ? e.message : 'Não foi possível abrir o DANFE.');
     } finally {
       setLoadingDanfe(false);
     }
@@ -39,17 +37,19 @@ export function NfeCard({ nota }: Props) {
       setLoadingXml(true);
       await downloadXml(nota);
     } catch (e) {
-      Alert.alert('Erro', e instanceof Error ? e.message : 'Não foi possível baixar o XML.');
+      showToast(e instanceof Error ? e.message : 'Não foi possível baixar o XML.');
     } finally {
       setLoadingXml(false);
     }
   };
 
-  const copyChave = () => {
+  const copyChave = async () => {
     if (!nota.chave_acesso) return;
-    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(nota.chave_acesso);
-      Alert.alert('Copiado', 'Chave copiada para a área de transferência.');
+    try {
+      await navigator.clipboard.writeText(nota.chave_acesso);
+      showToast('Chave copiada.');
+    } catch {
+      showToast('Não foi possível copiar a chave.');
     }
   };
 
@@ -57,145 +57,71 @@ export function NfeCard({ nota }: Props) {
   const isCanceled = ['101', '135', '155'].includes(String(nota.status_sefaz));
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-      <View style={styles.rowBetween}>
-        <Text style={[styles.cardTitle, { color: theme.secondary }]}>
+    <article className="nfe-card">
+      <div className="nfe-card__head">
+        <h3 className="nfe-card__title">
           NF {nota.numero ?? '—'}
           {nota.serie != null ? ` / Série ${nota.serie}` : ''}
-        </Text>
-        <Text style={[styles.status, { color: statusColor }]}>
+        </h3>
+        <span className="nfe-card__status" style={{ color: statusColor }}>
           {getStatusLabel(nota.status_sefaz)}
-        </Text>
-      </View>
+        </span>
+      </div>
 
       {nota.codigoPedido ? (
-        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+        <p className="nfe-card__line" style={{ color: 'var(--color-text-secondary)' }}>
           Pedido {nota.codigoPedido}
-        </Text>
+        </p>
       ) : null}
 
       {nota.tenantNome ? (
-        <Text style={[styles.line, { color: theme.text }]}>
-          <Text style={styles.label}>Conta: </Text>
-          {nota.tenantNome}
-        </Text>
+        <p className="nfe-card__line">
+          <strong>Conta:</strong> {nota.tenantNome}
+        </p>
       ) : null}
-
-      <Text style={[styles.line, { color: theme.text }]}>
-        <Text style={styles.label}>Cliente: </Text>
-        {nota.clienteNome ?? '—'}
-      </Text>
-      <Text style={[styles.line, { color: theme.text }]}>
-        <Text style={styles.label}>Empresa: </Text>
-        {nota.empresaNome ?? '—'}
-      </Text>
-      <Text style={[styles.line, { color: theme.text }]}>
-        <Text style={styles.label}>Valor: </Text>
-        {formatMoney(nota.valor_total)}
-      </Text>
-      <Text style={[styles.line, { color: theme.text }]}>
-        <Text style={styles.label}>Emissão: </Text>
-        {formatDateBR(nota.data_emissao)}
-      </Text>
+      <p className="nfe-card__line">
+        <strong>Cliente:</strong> {nota.clienteNome ?? '—'}
+      </p>
+      <p className="nfe-card__line">
+        <strong>Empresa:</strong> {nota.empresaNome ?? '—'}
+      </p>
+      <p className="nfe-card__line">
+        <strong>Valor:</strong> {formatMoney(nota.valor_total)}
+      </p>
+      <p className="nfe-card__line">
+        <strong>Emissão:</strong> {formatDateBR(nota.data_emissao)}
+      </p>
 
       {nota.chave_acesso ? (
-        <Pressable onPress={copyChave}>
-          <Text
-            style={[styles.chave, { color: theme.textMuted }]}
-            numberOfLines={1}
-          >
-            {nota.chave_acesso}
-          </Text>
-        </Pressable>
+        <button type="button" className="nfe-card__chave" onClick={() => void copyChave()}>
+          {nota.chave_acesso}
+        </button>
       ) : null}
 
-      <View style={styles.footer}>
-        <Pressable
-          onPress={handleDanfe}
-          disabled={loadingDanfe}
-          style={[styles.actionBtn, styles.actionOutline]}
-        >
-          <Ionicons name="print-outline" size={16} color="#0D6EFD" />
-          <Text style={styles.actionText}>
-            {loadingDanfe ? 'Abrindo…' : 'Imprimir DANFE'}
-          </Text>
-        </Pressable>
+      {toast ? (
+        <p style={{ fontSize: 12, color: 'var(--color-success)', marginTop: 6 }}>{toast}</p>
+      ) : null}
 
-        <Pressable
-          onPress={handleXml}
-          disabled={loadingXml}
-          style={[styles.actionBtn, styles.actionOutline]}
+      <div className="nfe-card__footer">
+        <button
+          type="button"
+          className="nfe-action"
+          onClick={() => void handleDanfe()}
+          disabled={loadingDanfe}
         >
-          <Ionicons name="download-outline" size={16} color="#0D6EFD" />
-          <Text style={styles.actionText}>
-            {loadingXml ? 'Baixando…' : isCanceled ? 'XML cancelamento' : 'Baixar XML'}
-          </Text>
-        </Pressable>
-      </View>
-    </View>
+          <Printer size={16} />
+          {loadingDanfe ? 'Abrindo…' : 'Imprimir DANFE'}
+        </button>
+        <button
+          type="button"
+          className="nfe-action"
+          onClick={() => void handleXml()}
+          disabled={loadingXml}
+        >
+          <Download size={16} />
+          {loadingXml ? 'Baixando…' : isCanceled ? 'XML cancelamento' : 'Baixar XML'}
+        </button>
+      </div>
+    </article>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-  },
-  rowBetween: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  status: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  subtitle: {
-    fontSize: 13,
-    marginTop: 4,
-    marginBottom: 6,
-  },
-  line: {
-    fontSize: 13,
-    marginBottom: 2,
-  },
-  label: {
-    fontWeight: 'bold',
-  },
-  chave: {
-    fontSize: 11,
-    marginTop: 8,
-  },
-  footer: {
-    marginTop: 10,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-end',
-    gap: 8,
-  },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-  },
-  actionOutline: {
-    borderWidth: 1,
-    borderColor: '#0D6EFD',
-  },
-  actionText: {
-    color: '#0D6EFD',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-});

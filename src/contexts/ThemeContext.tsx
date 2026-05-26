@@ -1,5 +1,11 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
-import { useColorScheme } from 'react-native';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
 export type Theme = {
   primary: string;
@@ -61,6 +67,27 @@ const darkTheme: Theme = {
   isDark: true,
 };
 
+function applyThemeToDocument(theme: Theme) {
+  const root = document.documentElement;
+  root.dataset.theme = theme.isDark ? 'dark' : 'light';
+  root.style.setProperty('--color-primary', theme.primary);
+  root.style.setProperty('--color-secondary', theme.secondary);
+  root.style.setProperty('--color-background', theme.background);
+  root.style.setProperty('--color-surface', theme.surface);
+  root.style.setProperty('--color-surface-variant', theme.surfaceVariant);
+  root.style.setProperty('--color-text', theme.text);
+  root.style.setProperty('--color-text-secondary', theme.textSecondary);
+  root.style.setProperty('--color-text-muted', theme.textMuted);
+  root.style.setProperty('--color-border', theme.border);
+  root.style.setProperty('--color-border-strong', theme.borderStrong);
+  root.style.setProperty('--color-border-input', theme.borderInput);
+  root.style.setProperty('--color-input-bg', theme.inputBg);
+  root.style.setProperty('--color-header-bg', theme.headerBg);
+  root.style.setProperty('--color-header-border', theme.headerBorder);
+  root.style.setProperty('--color-success', theme.success);
+  root.style.setProperty('--color-error', theme.error);
+}
+
 type ThemeContextValue = {
   theme: Theme;
   toggleTheme: () => void;
@@ -68,24 +95,29 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const systemScheme = useColorScheme();
-  const [override, setOverride] = useState<'light' | 'dark' | null>(null);
+const STORAGE_KEY = 'app-contador-theme';
 
-  const isDark = override ? override === 'dark' : systemScheme === 'dark';
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === 'dark') return true;
+    if (stored === 'light') return false;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
   const theme = isDark ? darkTheme : lightTheme;
 
-  const value = useMemo(
-    () => ({
-      theme,
-      toggleTheme: () =>
-        setOverride((prev) => {
-          const nextDark = prev ? prev !== 'dark' : systemScheme !== 'dark';
-          return nextDark ? 'dark' : 'light';
-        }),
-    }),
-    [theme, systemScheme]
-  );
+  useEffect(() => {
+    applyThemeToDocument(theme);
+    localStorage.setItem(STORAGE_KEY, isDark ? 'dark' : 'light');
+  }, [theme, isDark]);
+
+  const toggleTheme = useCallback(() => {
+    setIsDark((v) => !v);
+  }, []);
+
+  const value = useMemo(() => ({ theme, toggleTheme }), [theme, toggleTheme]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

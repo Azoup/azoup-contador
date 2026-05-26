@@ -1,15 +1,8 @@
-import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { LogOut, Moon, Sun } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 type Props = {
   title?: string;
@@ -18,107 +11,40 @@ type Props = {
 export function AppHeader({ title = 'Consulta NF-e' }: Props) {
   const { theme, toggleTheme } = useTheme();
   const { signOut, contadores } = useAuth();
-  const { width } = useWindowDimensions();
-  const isMobile = width < 768;
+  const navigate = useNavigate();
+  const isMobile = useMediaQuery('(max-width: 767px)');
 
   const userLabel = contadores[0]?.nome ?? 'Contador';
 
   return (
-    <View
-      style={[
-        styles.header,
-        {
-          backgroundColor: theme.headerBg,
-          borderBottomColor: theme.headerBorder,
-        },
-      ]}
-    >
-      <View style={styles.left}>
-        <View style={[styles.logoDot, { backgroundColor: theme.primary }]} />
-        <Text style={[styles.brand, { color: theme.primary }]} numberOfLines={1}>
-          Azoup
-        </Text>
-        {!isMobile && (
-          <Text style={[styles.title, { color: theme.textSecondary }]} numberOfLines={1}>
-            {title}
-          </Text>
-        )}
-      </View>
+    <header className="app-header">
+      <div className="app-header__left">
+        <span className="app-header__logo" aria-hidden />
+        <span className="app-header__brand">Azoup</span>
+        {!isMobile && <span className="app-header__title">{title}</span>}
+      </div>
 
-      <View style={styles.right}>
-        {!isMobile && (
-          <Text style={[styles.user, { color: theme.textSecondary }]} numberOfLines={1}>
-            {userLabel}
-          </Text>
-        )}
-        <Pressable onPress={toggleTheme} style={styles.iconBtn} accessibilityLabel="Alternar tema">
-          <Ionicons
-            name={theme.isDark ? 'sunny-outline' : 'moon-outline'}
-            size={22}
-            color={theme.textSecondary}
-          />
-        </Pressable>
-        <Pressable onPress={signOut} style={styles.iconBtn} accessibilityLabel="Sair">
-          <Ionicons name="log-out-outline" size={22} color={theme.textSecondary} />
-          {!isMobile && (
-            <Text style={[styles.sairText, { color: theme.textSecondary }]}>Sair</Text>
-          )}
-        </Pressable>
-      </View>
-    </View>
+      <div className="app-header__right">
+        {!isMobile && <span className="app-header__user">{userLabel}</span>}
+        <button
+          type="button"
+          className="btn btn--ghost"
+          onClick={toggleTheme}
+          aria-label="Alternar tema"
+        >
+          {theme.isDark ? <Sun size={22} /> : <Moon size={22} />}
+        </button>
+        <button
+          type="button"
+          className="btn btn--ghost"
+          onClick={() => void signOut().then(() => navigate('/login', { replace: true }))}
+          aria-label="Sair"
+          style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+        >
+          <LogOut size={22} />
+          {!isMobile && <span style={{ fontSize: 14 }}>Sair</span>}
+        </button>
+      </div>
+    </header>
   );
 }
-
-const styles = StyleSheet.create({
-  header: {
-    height: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    ...Platform.select({
-      web: { position: 'sticky' as const, top: 0, zIndex: 100 },
-      default: {},
-    }),
-  },
-  left: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-    minWidth: 0,
-  },
-  logoDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  brand: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  title: {
-    fontSize: 15,
-    marginLeft: 8,
-  },
-  right: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  user: {
-    fontSize: 13,
-    maxWidth: 160,
-    marginRight: 8,
-  },
-  iconBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-    gap: 4,
-  },
-  sairText: {
-    fontSize: 14,
-  },
-});

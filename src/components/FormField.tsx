@@ -1,48 +1,15 @@
-import React from 'react';
-import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
-import { useTheme } from '@/contexts/ThemeContext';
+import type { InputHTMLAttributes } from 'react';
 
-type Props = TextInputProps & {
+type Props = InputHTMLAttributes<HTMLInputElement> & {
   label: string;
 };
 
-export function FormField({ label, style, ...rest }: Props) {
-  const { theme } = useTheme();
-
+export function FormField({ label, id, ...rest }: Props) {
+  const inputId = id ?? label.toLowerCase().replace(/\s+/g, '-');
   return (
-    <View style={styles.wrap}>
-      <Text style={[styles.label, { color: theme.textSecondary }]}>{label}</Text>
-      <TextInput
-        placeholderTextColor={theme.textMuted}
-        style={[
-          styles.input,
-          {
-            backgroundColor: theme.inputBg,
-            borderColor: theme.borderInput,
-            color: theme.text,
-          },
-          style,
-        ]}
-        {...rest}
-      />
-    </View>
+    <div className="form-field">
+      <label htmlFor={inputId}>{label}</label>
+      <input id={inputId} {...rest} />
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: {
-    marginBottom: 14,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-  input: {
-    height: 44,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 15,
-  },
-});
