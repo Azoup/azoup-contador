@@ -1,4 +1,4 @@
-import { FolderDown, RefreshCw, Search } from 'lucide-react';
+import { FolderDown, Search } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppHeader } from '@/components/AppHeader';
 import { FormMessage } from '@/components/FormMessage';
@@ -27,7 +27,6 @@ export function NotasPage() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [notas, setNotas] = useState<NotaEnriquecida[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   const [busca, setBusca] = useState('');
@@ -77,12 +76,6 @@ export function NotasPage() {
       active = false;
     };
   }, [loadData]);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  };
 
   const notasFiltradas = useMemo(
     () => notas.filter((n) => statusMatchesFilter(n.status_sefaz, statusFilter)),
@@ -211,11 +204,6 @@ export function NotasPage() {
               <StatusChip key={s} value={s} active={statusFilter} onPress={setStatusFilter} />
             ))}
           </div>
-
-          <button type="button" className="refresh-link" onClick={() => void onRefresh()}>
-            <RefreshCw size={18} className={refreshing ? 'spinner' : undefined} />
-            Atualizar lista
-          </button>
         </section>
 
         {!loading && !erro && notas.length > 0 ? <NfeTotalsBar totals={totals} /> : null}
