@@ -14,3 +14,9 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+interface Window {
+  showDirectoryPicker?: (options?: {
+    mode?: 'read' | 'readwrite';
+  }) => Promise<FileSystemDirectoryHandle>;
+}

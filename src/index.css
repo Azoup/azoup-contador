@@ -296,6 +296,15 @@ a {
   }
 }
 
+.notas-page__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
 .notas-page__title {
   font-size: 24px;
   font-weight: 700;
@@ -306,7 +315,26 @@ a {
 .notas-page__info {
   font-size: 13px;
   color: var(--color-text-secondary);
-  margin: 0 0 16px;
+  margin: 0;
+}
+
+.btn--download-xml {
+  width: auto;
+  min-width: 220px;
+  white-space: nowrap;
+}
+
+.bulk-progress {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 767px) {
+  .btn--download-xml {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 .filter-card {

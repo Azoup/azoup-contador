@@ -1,6 +1,7 @@
-import { RefreshCw, Search } from 'lucide-react';
+import { FolderDown, RefreshCw, Search } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppHeader } from '@/components/AppHeader';
+import { FormMessage } from '@/components/FormMessage';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { EmpresaFilterSelect } from '@/components/EmpresaFilterSelect';
 import { NfeCard } from '@/components/NfeCard';
@@ -12,6 +13,10 @@ import { fetchEmpresasByTenants, fetchNotasFiscais } from '@/services/nfeService
 import { getMesAtualRange, toIsoDate, type DateRangeValue } from '@/utils/dateRange';
 import { statusMatchesFilter, type StatusFilter } from '@/utils/nfeStatus';
 import { computeNfeTotals } from '@/utils/nfeTotals';
+import {
+  downloadAllXmlsToFolder,
+  supportsFolderPicker,
+} from '@/services/bulkXmlDownload';
 import type { Empresa, NotaEnriquecida } from '@/types';
 
 export function NotasPage() {
@@ -29,6 +34,12 @@ export function NotasPage() {
   const [empresaId, setEmpresaId] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRangeValue>(getMesAtualRange);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('todas');
+  const [bulkDownloading, setBulkDownloading] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<string | null>(null);
+  const [bulkFeedback, setBulkFeedback] = useState<{
+    type: 'success' | 'error' | 'info';
+    message: string;
+  } | null>(null);
 
   const dataInicio = useMemo(() => toIsoDate(dateRange.from), [dateRange.from]);
   const dataFim = useMemo(() => toIsoDate(dateRange.to), [dateRange.to]);
@@ -81,14 +92,95 @@ export function NotasPage() {
   const totals = useMemo(() => computeNfeTotals(notas), [notas]);
   const clientesLabel = clientes.map((c) => c.nome || c.email || c.id).join(', ');
 
+  const handleBulkXmlDownload = async () => {
+    setBulkFeedback(null);
+
+    if (!notasFiltradas.length) {
+      setBulkFeedback({
+        type: 'info',
+        message: 'Não há notas filtradas para baixar.',
+      });
+      return;
+    }
+
+    if (!supportsFolderPicker()) {
+      setBulkFeedback({
+        type: 'error',
+        message:
+          'Para escolher uma pasta no computador, use Chrome ou Edge. Outros navegadores não suportam essa função.',
+      });
+      return;
+    }
+
+    try {
+      setBulkDownloading(true);
+      setBulkProgress('Aguardando seleção da pasta…');
+
+      const result = await downloadAllXmlsToFolder(notasFiltradas, (p) => {
+        setBulkProgress(`Salvando ${p.current} de ${p.total}: ${p.fileName}`);
+      });
+
+      const parts = [
+        `${result.saved} XML(s) salvos em "${result.folderName}".`,
+        result.skippedNoXml > 0
+          ? `${result.skippedNoXml} nota(s) sem XML disponível foram ignoradas.`
+          : null,
+        result.failed.length > 0
+          ? `${result.failed.length} falha(s) ao baixar.`
+          : null,
+      ].filter(Boolean);
+
+      setBulkFeedback({
+        type: result.failed.length > 0 && result.saved === 0 ? 'error' : 'success',
+        message: parts.join(' '),
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Não foi possível baixar os XMLs.';
+      if (msg !== 'Seleção de pasta cancelada.') {
+        setBulkFeedback({ type: 'error', message: msg });
+      }
+    } finally {
+      setBulkDownloading(false);
+      setBulkProgress(null);
+    }
+  };
+
   return (
     <div className="app-shell">
       <AppHeader />
       <main className="app-main notas-page">
-        <h1 className="notas-page__title">Notas fiscais</h1>
-        <p className="notas-page__info">
-          {contadores.length} vínculo(s) · {clientes.length} cliente(s): {clientesLabel || '—'}
-        </p>
+        <div className="notas-page__top">
+          <div>
+            <h1 className="notas-page__title">Notas fiscais</h1>
+            <p className="notas-page__info">
+              {contadores.length} vínculo(s) · {clientes.length} cliente(s):{' '}
+              {clientesLabel || '—'}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn--primary btn--download-xml"
+            disabled={loading || bulkDownloading || notasFiltradas.length === 0}
+            onClick={() => void handleBulkXmlDownload()}
+            title={
+              supportsFolderPicker()
+                ? 'Escolha uma pasta e salve os XMLs das notas filtradas'
+                : 'Disponível no Chrome ou Edge'
+            }
+          >
+            <FolderDown size={18} />
+            {bulkDownloading ? 'Baixando XMLs…' : 'Baixar XMLs na pasta'}
+          </button>
+        </div>
+
+        {bulkProgress ? (
+          <p className="bulk-progress" role="status">
+            {bulkProgress}
+          </p>
+        ) : null}
+        {bulkFeedback ? (
+          <FormMessage type={bulkFeedback.type} message={bulkFeedback.message} />
+        ) : null}
 
         <section className="filter-card">
           <div className="search-box">

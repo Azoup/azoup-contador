@@ -1,9 +1,11 @@
 import {
   endOfDay,
+  endOfMonth,
   format,
   startOfDay,
   startOfMonth,
-  subDays,
+  startOfYear,
+  subMonths,
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 
@@ -12,13 +14,13 @@ export type DateRangeValue = {
   to: Date;
 };
 
-export type DatePresetId = 'hoje' | '7d' | '30d' | '90d';
+export type DatePresetId = 'hoje' | 'mes_atual' | 'mes_anterior' | 'ano';
 
 export const DATE_PRESETS: { id: DatePresetId; label: string }[] = [
   { id: 'hoje', label: 'Hoje' },
-  { id: '7d', label: 'Últimos 7 dias' },
-  { id: '30d', label: 'Últimos 30 dias' },
-  { id: '90d', label: 'Últimos 90 dias' },
+  { id: 'mes_atual', label: 'Mês atual' },
+  { id: 'mes_anterior', label: 'Mês anterior' },
+  { id: 'ano', label: 'Ano' },
 ];
 
 export function startOfToday(): Date {
@@ -26,11 +28,7 @@ export function startOfToday(): Date {
 }
 
 export function getMesAtualRange(): DateRangeValue {
-  const today = startOfToday();
-  return {
-    from: startOfMonth(today),
-    to: today,
-  };
+  return getPresetRange('mes_atual');
 }
 
 export function getPresetRange(id: DatePresetId): DateRangeValue {
@@ -39,12 +37,23 @@ export function getPresetRange(id: DatePresetId): DateRangeValue {
   switch (id) {
     case 'hoje':
       return { from: today, to: today };
-    case '7d':
-      return { from: subDays(today, 6), to: today };
-    case '30d':
-      return { from: subDays(today, 29), to: today };
-    case '90d':
-      return { from: subDays(today, 89), to: today };
+    case 'mes_atual':
+      return {
+        from: startOfMonth(today),
+        to: today,
+      };
+    case 'mes_anterior': {
+      const mesAnterior = subMonths(today, 1);
+      return {
+        from: startOfMonth(mesAnterior),
+        to: startOfDay(endOfMonth(mesAnterior)),
+      };
+    }
+    case 'ano':
+      return {
+        from: startOfYear(today),
+        to: today,
+      };
     default:
       return getMesAtualRange();
   }
