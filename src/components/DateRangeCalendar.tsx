@@ -52,6 +52,20 @@ function applyCalendarTheme(theme: Theme) {
     }
     .azoup-day-picker .rdp-chevron { fill: ${theme.textSecondary}; }
     .azoup-day-picker .rdp-disabled .rdp-day_button { opacity: 0.35; }
+    @media (max-width: 767px) {
+      .azoup-day-picker {
+        --rdp-day-height: 40px;
+        --rdp-day-width: 40px;
+        font-size: 13px;
+        margin: 0 auto;
+      }
+      .azoup-day-picker .rdp-months {
+        max-width: 100%;
+      }
+      .azoup-day-picker .rdp-month {
+        width: 100%;
+      }
+    }
   `;
 }
 
@@ -86,12 +100,11 @@ export function DateRangeCalendar({ value, onChange, theme }: Props) {
         onMonthChange={setMonth}
         selected={selected}
         onSelect={(range) => {
-          if (range?.from && range?.to) {
-            onChange({
-              from: startOfDay(range.from),
-              to: startOfDay(range.to),
-            });
-          }
+          if (!range?.from) return;
+          onChange({
+            from: startOfDay(range.from),
+            to: startOfDay(range.to ?? range.from),
+          });
         }}
         disabled={{ after: new Date() }}
         className="azoup-day-picker"

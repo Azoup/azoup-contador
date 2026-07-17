@@ -1,5 +1,6 @@
 import { Calendar, ChevronDown, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { DateRangeCalendar } from '@/components/DateRangeCalendar';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -8,6 +9,7 @@ import {
   detectActivePreset,
   formatRangeLabel,
   getPresetRange,
+  type DatePresetId,
   type DateRangeValue,
 } from '@/utils/dateRange';
 
@@ -16,110 +18,149 @@ type Props = {
   onChange: (range: DateRangeValue) => void;
 };
 
-function DateRangePickerPanel({
-  draft,
-  onDraftChange,
-  stacked,
-}: {
-  draft: DateRangeValue;
-  onDraftChange: (range: DateRangeValue) => void;
-  stacked: boolean;
-}) {
-  const { theme } = useTheme();
-  const activePreset = useMemo(() => detectActivePreset(draft), [draft]);
-
-  return (
-    <div className={`date-panel ${stacked ? 'date-panel--stacked' : ''}`}>
-      <div className="date-presets">
-        {DATE_PRESETS.map((preset) => {
-          const active = activePreset === preset.id;
-          return (
-            <button
-              key={preset.id}
-              type="button"
-              className={`preset-btn ${active ? 'preset-btn--active' : ''}`}
-              onClick={() => onDraftChange(getPresetRange(preset.id))}
-            >
-              {preset.label}
-            </button>
-          );
-        })}
-      </div>
-      <div className={`date-calendar-col ${stacked ? 'date-panel--stacked' : ''}`}>
-        <div className="date-divider" aria-hidden />
-        <DateRangeCalendar value={draft} onChange={onDraftChange} theme={theme} />
-      </div>
-    </div>
-  );
-}
-
 export function DateRangeFilter({ value, onChange }: Props) {
-  const modalStacked = useMediaQuery('(max-width: 719px)');
+  const { theme } = useTheme();
+  const isMobile = useMediaQuery('(max-width: 767px)');
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<DateRangeValue>(value);
+  const [showCalendar, setShowCalendar] = useState(false);
 
-  useEffect(() => {
-    if (open) setDraft(value);
-  }, [open, value]);
-
+  const activePreset = useMemo(() => detectActivePreset(draft), [draft]);
   const label = formatRangeLabel(value);
 
-  const apply = () => {
-    onChange(draft);
+  useEffect(() => {
+    if (open) {
+      setDraft(value);
+      setShowCalendar(false);
+    }
+  }, [open, value]);
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  const close = () => setOpen(false);
+
+  const apply = (range: DateRangeValue) => {
+    onChange(range);
     setOpen(false);
   };
 
-  return (
-    <>
-      <div className="filter-field filter-field--period">
-        <label>Período</label>
-        <div className="filter-control">
-          <button type="button" className="filter-trigger" onClick={() => setOpen(true)}>
-            <Calendar size={18} color="var(--color-text-muted)" />
-            <span>{label}</span>
-            <ChevronDown size={18} color="var(--color-text-muted)" />
-          </button>
-        </div>
-      </div>
+  const selectPreset = (id: DatePresetId) => {
+    const range = getPresetRange(id);
+    setDraft(range);
+    if (isMobile) {
+      apply(range);
+    }
+  };
 
-      {open ? (
-        <div className="modal-overlay" role="presentation" onClick={() => setOpen(false)}>
+  const modal = open
+    ? createPortal(
+        <div
+          className={`modal-overlay ${isMobile ? 'modal-overlay--sheet' : ''}`}
+          role="presentation"
+          onClick={close}
+        >
           <div
-            className={`modal-panel ${modalStacked ? 'modal-panel--narrow' : ''}`}
+            className={`modal-panel modal-panel--period ${isMobile ? 'modal-panel--sheet' : ''}`}
             role="dialog"
+            aria-modal="true"
             aria-labelledby="period-modal-title"
             onClick={(e) => e.stopPropagation()}
           >
+            <div className="modal-sheet-handle" aria-hidden />
+
             <div className="modal-header">
               <h2 id="period-modal-title" className="modal-title">
-                Selecionar período
+                Período
               </h2>
               <button
                 type="button"
                 className="btn btn--ghost"
-                onClick={() => setOpen(false)}
+                onClick={close}
                 aria-label="Fechar"
               >
                 <X size={24} />
               </button>
             </div>
+
             <p className="modal-preview">{formatRangeLabel(draft)}</p>
-            <DateRangePickerPanel
-              draft={draft}
-              onDraftChange={setDraft}
-              stacked={modalStacked}
-            />
-            <div className="modal-footer">
-              <button type="button" className="btn btn--ghost-border" onClick={() => setOpen(false)}>
-                Cancelar
-              </button>
-              <button type="button" className="btn btn--primary" style={{ width: 'auto' }} onClick={apply}>
-                Aplicar
-              </button>
+
+            <div className="date-presets date-presets--grid">
+              {DATE_PRESETS.map((preset) => {
+                const active = activePreset === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    className={`preset-btn ${active ? 'preset-btn--active' : ''}`}
+                    onClick={() => selectPreset(preset.id)}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
             </div>
+
+            {isMobile ? (
+              <button
+                type="button"
+                className="date-toggle-calendar"
+                onClick={() => setShowCalendar((v) => !v)}
+              >
+                {showCalendar ? 'Ocultar calendário' : 'Escolher no calendário'}
+              </button>
+            ) : null}
+
+            {(!isMobile || showCalendar) && (
+              <div className="date-calendar-section">
+                <DateRangeCalendar value={draft} onChange={setDraft} theme={theme} />
+              </div>
+            )}
+
+            {(!isMobile || showCalendar) && (
+              <div className="modal-footer modal-footer--sticky">
+                <button type="button" className="btn btn--ghost-border" onClick={close}>
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--primary modal-footer__apply"
+                  onClick={() => apply(draft)}
+                >
+                  Aplicar
+                </button>
+              </div>
+            )}
           </div>
+        </div>,
+        document.body
+      )
+    : null;
+
+  return (
+    <>
+      <div className="filter-field filter-field--period">
+        <label htmlFor="period-trigger">Período</label>
+        <div className="filter-control">
+          <button
+            id="period-trigger"
+            type="button"
+            className="filter-trigger"
+            onClick={() => setOpen(true)}
+          >
+            <Calendar size={18} color="var(--color-text-muted)" aria-hidden />
+            <span>{label}</span>
+            <ChevronDown size={18} color="var(--color-text-muted)" aria-hidden />
+          </button>
         </div>
-      ) : null}
+      </div>
+      {modal}
     </>
   );
 }
