@@ -37,6 +37,19 @@ async function resolveUniqueFileName(
   }
 }
 
+function triggerBrowserDownload(blob: Blob, fileName: string) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+async function sleep(ms: number) {
+  await new Promise((r) => setTimeout(r, ms));
+}
+
+/** Desktop: escolhe pasta e grava os XMLs. */
 export async function downloadAllXmlsToFolder(
   notas: NotaFiscal[],
   onProgress?: (progress: BulkXmlProgress) => void
@@ -89,4 +102,52 @@ export async function downloadAllXmlsToFolder(
   }
 
   return result;
+}
+
+/** Celular / sem pasta: dispara download de cada XML no navegador. */
+export async function downloadAllXmlsViaBrowser(
+  notas: NotaFiscal[],
+  onProgress?: (progress: BulkXmlProgress) => void
+): Promise<BulkXmlResult> {
+  const comXml = notas.filter((n) => getXmlDownloadUrl(n));
+  const skippedNoXml = notas.length - comXml.length;
+  const result: BulkXmlResult = {
+    saved: 0,
+    skippedNoXml,
+    failed: [],
+    folderName: 'Downloads',
+  };
+
+  for (let i = 0; i < comXml.length; i++) {
+    const nota = comXml[i];
+    const nome = buildXmlFileName(nota);
+    onProgress?.({ current: i + 1, total: comXml.length, fileName: nome });
+
+    try {
+      const blob = await fetchXmlBlob(nota);
+      triggerBrowserDownload(blob, nome);
+      result.saved += 1;
+      // Evita o navegador bloquear vários downloads seguidos
+      if (i < comXml.length - 1) await sleep(350);
+    } catch (e) {
+      result.failed.push({
+        notaId: nota.id,
+        numero: nota.numero,
+        error: e instanceof Error ? e.message : 'Falha ao baixar XML',
+      });
+    }
+  }
+
+  return result;
+}
+
+/** Pasta no desktop; downloads do navegador no celular. */
+export async function downloadAllXmls(
+  notas: NotaFiscal[],
+  onProgress?: (progress: BulkXmlProgress) => void
+): Promise<BulkXmlResult> {
+  if (supportsFolderPicker()) {
+    return downloadAllXmlsToFolder(notas, onProgress);
+  }
+  return downloadAllXmlsViaBrowser(notas, onProgress);
 }

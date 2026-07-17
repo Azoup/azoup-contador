@@ -20,19 +20,16 @@ type Props = {
 
 export function DateRangeFilter({ value, onChange }: Props) {
   const { theme } = useTheme();
-  const isMobile = useMediaQuery('(max-width: 767px)');
+  const isCompact = useMediaQuery('(max-width: 900px)');
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<DateRangeValue>(value);
-  const [showCalendar, setShowCalendar] = useState(false);
 
-  const activePreset = useMemo(() => detectActivePreset(draft), [draft]);
+  const activePreset = useMemo(() => detectActivePreset(value), [value]);
+  const draftPreset = useMemo(() => detectActivePreset(draft), [draft]);
   const label = formatRangeLabel(value);
 
   useEffect(() => {
-    if (open) {
-      setDraft(value);
-      setShowCalendar(false);
-    }
+    if (open) setDraft(value);
   }, [open, value]);
 
   useEffect(() => {
@@ -46,97 +43,73 @@ export function DateRangeFilter({ value, onChange }: Props) {
 
   const close = () => setOpen(false);
 
-  const apply = (range: DateRangeValue) => {
-    onChange(range);
-    setOpen(false);
+  const applyPreset = (id: DatePresetId) => {
+    onChange(getPresetRange(id));
   };
 
-  const selectPreset = (id: DatePresetId) => {
-    const range = getPresetRange(id);
-    setDraft(range);
-    if (isMobile) {
-      apply(range);
-    }
+  const applyDraft = () => {
+    onChange(draft);
+    setOpen(false);
   };
 
   const modal = open
     ? createPortal(
         <div
-          className={`modal-overlay ${isMobile ? 'modal-overlay--sheet' : ''}`}
+          className={`modal-overlay ${isCompact ? 'modal-overlay--sheet' : ''}`}
           role="presentation"
           onClick={close}
         >
           <div
-            className={`modal-panel modal-panel--period ${isMobile ? 'modal-panel--sheet' : ''}`}
+            className={`modal-panel modal-panel--period ${isCompact ? 'modal-panel--sheet' : ''}`}
             role="dialog"
             aria-modal="true"
             aria-labelledby="period-modal-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="modal-sheet-handle" aria-hidden />
-
+            {isCompact ? <div className="modal-sheet-handle" aria-hidden /> : null}
             <div className="modal-header">
               <h2 id="period-modal-title" className="modal-title">
-                Período
+                Selecionar período
               </h2>
-              <button
-                type="button"
-                className="btn btn--ghost"
-                onClick={close}
-                aria-label="Fechar"
-              >
+              <button type="button" className="btn btn--ghost" onClick={close} aria-label="Fechar">
                 <X size={24} />
               </button>
             </div>
-
             <p className="modal-preview">{formatRangeLabel(draft)}</p>
 
-            <div className="date-presets date-presets--grid">
-              {DATE_PRESETS.map((preset) => {
-                const active = activePreset === preset.id;
-                return (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    className={`preset-btn ${active ? 'preset-btn--active' : ''}`}
-                    onClick={() => selectPreset(preset.id)}
-                  >
-                    {preset.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {isMobile ? (
-              <button
-                type="button"
-                className="date-toggle-calendar"
-                onClick={() => setShowCalendar((v) => !v)}
-              >
-                {showCalendar ? 'Ocultar calendário' : 'Escolher no calendário'}
-              </button>
-            ) : null}
-
-            {(!isMobile || showCalendar) && (
+            <div className={`date-panel ${isCompact ? 'date-panel--stacked' : ''}`}>
+              <div className={`date-presets ${isCompact ? 'date-presets--grid' : ''}`}>
+                {DATE_PRESETS.map((preset) => {
+                  const active = draftPreset === preset.id;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      className={`preset-btn ${active ? 'preset-btn--active' : ''}`}
+                      onClick={() => setDraft(getPresetRange(preset.id))}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
               <div className="date-calendar-section">
                 <DateRangeCalendar value={draft} onChange={setDraft} theme={theme} />
               </div>
-            )}
+            </div>
 
-            {(!isMobile || showCalendar) && (
-              <div className="modal-footer modal-footer--sticky">
-                <button type="button" className="btn btn--ghost-border" onClick={close}>
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="btn btn--primary modal-footer__apply"
-                  onClick={() => apply(draft)}
-                >
-                  Aplicar
-                </button>
-              </div>
-            )}
+            <div className={`modal-footer ${isCompact ? 'modal-footer--sticky' : ''}`}>
+              <button type="button" className="btn btn--ghost-border" onClick={close}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn btn--primary modal-footer__apply"
+                onClick={applyDraft}
+              >
+                Aplicar
+              </button>
+            </div>
           </div>
         </div>,
         document.body
@@ -144,7 +117,7 @@ export function DateRangeFilter({ value, onChange }: Props) {
     : null;
 
   return (
-    <>
+    <div className="period-filter">
       <div className="filter-field filter-field--period">
         <label htmlFor="period-trigger">Período</label>
         <div className="filter-control">
@@ -160,7 +133,23 @@ export function DateRangeFilter({ value, onChange }: Props) {
           </button>
         </div>
       </div>
+
+      <div className="period-filter__presets" role="group" aria-label="Atalhos de período">
+        {DATE_PRESETS.map((preset) => {
+          const active = activePreset === preset.id;
+          return (
+            <button
+              key={preset.id}
+              type="button"
+              className={`period-chip ${active ? 'period-chip--active' : ''}`}
+              onClick={() => applyPreset(preset.id)}
+            >
+              {preset.label}
+            </button>
+          );
+        })}
+      </div>
       {modal}
-    </>
+    </div>
   );
 }

@@ -7,7 +7,7 @@ type Props = {
 };
 
 export function NfeTotalsBar({ totals }: Props) {
-  const stacked = useMediaQuery('(max-width: 767px)');
+  const stacked = useMediaQuery('(max-width: 900px)');
 
   const items = [
     {

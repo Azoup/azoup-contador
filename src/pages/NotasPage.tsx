@@ -14,7 +14,7 @@ import { getMesAtualRange, toIsoDate, type DateRangeValue } from '@/utils/dateRa
 import { statusMatchesFilter, type StatusFilter } from '@/utils/nfeStatus';
 import { computeNfeTotals } from '@/utils/nfeTotals';
 import {
-  downloadAllXmlsToFolder,
+  downloadAllXmls,
   supportsFolderPicker,
 } from '@/services/bulkXmlDownload';
 import type { Empresa, NotaEnriquecida } from '@/types';
@@ -22,7 +22,8 @@ import type { Empresa, NotaEnriquecida } from '@/types';
 export function NotasPage() {
   const { tenantIds, clientes, contadores } = useAuth();
   const isWideGrid = useMediaQuery('(min-width: 1024px)');
-  const isMobile = useMediaQuery('(max-width: 767px)');
+  const isMobile = useMediaQuery('(max-width: 900px)');
+  const useFolderPicker = supportsFolderPicker();
 
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [notas, setNotas] = useState<NotaEnriquecida[]>([]);
@@ -96,25 +97,22 @@ export function NotasPage() {
       return;
     }
 
-    if (!supportsFolderPicker()) {
-      setBulkFeedback({
-        type: 'error',
-        message:
-          'Para escolher uma pasta no computador, use Chrome ou Edge. Outros navegadores não suportam essa função.',
-      });
-      return;
-    }
-
     try {
       setBulkDownloading(true);
-      setBulkProgress('Aguardando seleção da pasta…');
+      setBulkProgress(
+        useFolderPicker
+          ? 'Aguardando seleção da pasta…'
+          : 'Preparando downloads…'
+      );
 
-      const result = await downloadAllXmlsToFolder(notasFiltradas, (p) => {
-        setBulkProgress(`Salvando ${p.current} de ${p.total}: ${p.fileName}`);
+      const result = await downloadAllXmls(notasFiltradas, (p) => {
+        setBulkProgress(`Baixando ${p.current} de ${p.total}: ${p.fileName}`);
       });
 
       const parts = [
-        `${result.saved} XML(s) salvos em "${result.folderName}".`,
+        useFolderPicker
+          ? `${result.saved} XML(s) salvos em "${result.folderName}".`
+          : `${result.saved} XML(s) enviados para Downloads.`,
         result.skippedNoXml > 0
           ? `${result.skippedNoXml} nota(s) sem XML disponível foram ignoradas.`
           : null,
@@ -156,13 +154,19 @@ export function NotasPage() {
             disabled={loading || bulkDownloading || notasFiltradas.length === 0}
             onClick={() => void handleBulkXmlDownload()}
             title={
-              supportsFolderPicker()
+              useFolderPicker
                 ? 'Escolha uma pasta e salve os XMLs das notas filtradas'
-                : 'Disponível no Chrome ou Edge'
+                : 'Baixa os XMLs das notas filtradas'
             }
           >
             <FolderDown size={18} />
-            {bulkDownloading ? 'Baixando XMLs…' : 'Baixar XMLs na pasta'}
+            <span>
+              {bulkDownloading
+                ? 'Baixando XMLs…'
+                : useFolderPicker
+                  ? 'Baixar XMLs na pasta'
+                  : 'Baixar XMLs'}
+            </span>
           </button>
         </div>
 
@@ -189,7 +193,7 @@ export function NotasPage() {
             />
           </div>
 
-          <div className="filter-fields">
+          <div className={`filter-fields ${isMobile ? 'filter-fields--mobile' : ''}`}>
             <EmpresaFilterSelect
               empresas={empresas}
               clientes={clientes}

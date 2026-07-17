@@ -25,7 +25,7 @@ function formatEmpresaLabel(
 }
 
 export function EmpresaFilterSelect({ empresas, clientes = [], value, onChange }: Props) {
-  const isMobile = useMediaQuery('(max-width: 767px)');
+  const isMobile = useMediaQuery('(max-width: 900px)');
   const [open, setOpen] = useState(false);
 
   const multiplosClientes = useMemo(() => {
