@@ -1,6 +1,13 @@
 import type { Plugin } from 'vite';
 
-const R2_XML_PATTERN = /^https:\/\/pub-[a-z0-9]+\.r2\.dev\/nfe_xmls\//i;
+const R2_XML =
+  /^https:\/\/pub-[a-z0-9]+\.r2\.dev\/nfe_xmls\//i;
+const SUPABASE_STORAGE =
+  /^https:\/\/[a-z0-9-]+\.supabase\.co\/storage\/v1\/object\/public\//i;
+
+function isAllowed(url: string): boolean {
+  return R2_XML.test(url) || SUPABASE_STORAGE.test(url);
+}
 
 export function xmlProxyDevPlugin(): Plugin {
   return {
@@ -15,7 +22,7 @@ export function xmlProxyDevPlugin(): Plugin {
         const parsed = new URL(req.url, 'http://localhost');
         const target = parsed.searchParams.get('url');
 
-        if (!target || !R2_XML_PATTERN.test(target)) {
+        if (!target || !isAllowed(target)) {
           res.statusCode = 400;
           res.end('URL de XML inválida');
           return;

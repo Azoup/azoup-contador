@@ -1,6 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const R2_XML_PATTERN = /^https:\/\/pub-[a-z0-9]+\.r2\.dev\/nfe_xmls\//i;
+const R2_XML =
+  /^https:\/\/pub-[a-z0-9]+\.r2\.dev\/nfe_xmls\//i;
+const SUPABASE_STORAGE =
+  /^https:\/\/[a-z0-9-]+\.supabase\.co\/storage\/v1\/object\/public\//i;
+
+function isAllowed(url: string): boolean {
+  return R2_XML.test(url) || SUPABASE_STORAGE.test(url);
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
@@ -10,7 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const raw = req.query.url;
   const url = typeof raw === 'string' ? raw : Array.isArray(raw) ? raw[0] : null;
 
-  if (!url || !R2_XML_PATTERN.test(url)) {
+  if (!url || !isAllowed(url)) {
     return res.status(400).json({ error: 'URL de XML inválida' });
   }
 

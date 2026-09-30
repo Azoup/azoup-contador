@@ -60,7 +60,7 @@ export function NfeCard({ nota }: Props) {
     <article className="nfe-card">
       <div className="nfe-card__head">
         <h3 className="nfe-card__title">
-          NF {nota.numero ?? '—'}
+          {nota.modelo === '65' ? 'NFC-e' : 'NF'} {nota.numero ?? '—'}
           {nota.serie != null ? ` / Série ${nota.serie}` : ''}
         </h3>
         <span className="nfe-card__status" style={{ color: statusColor }}>
@@ -71,6 +71,10 @@ export function NfeCard({ nota }: Props) {
       {nota.codigoPedido ? (
         <p className="nfe-card__line" style={{ color: 'var(--color-text-secondary)' }}>
           Pedido {nota.codigoPedido}
+        </p>
+      ) : nota.pdv_venda_id ? (
+        <p className="nfe-card__line" style={{ color: 'var(--color-text-secondary)' }}>
+          Cupom PDV {nota.pdv_venda_id}
         </p>
       ) : null}
 

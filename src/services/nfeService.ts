@@ -58,6 +58,8 @@ export async function fetchNotasFiscais(
       empresa_id,
       cliente_id,
       venda_id,
+      pdv_venda_id,
+      modelo,
       cliente_id_tenant,
       created_at
     `

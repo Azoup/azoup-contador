@@ -1,14 +1,14 @@
 import { BACKEND_URL } from './supabase';
 import type { NotaFiscal } from '@/types';
+import { needsXmlProxy } from '@/utils/xmlProxyUrl';
 
 const CANCELED_STATUS = ['101', '135', '155'];
-const R2_XML_PATTERN = /^https:\/\/pub-[a-z0-9]+\.r2\.dev\/nfe_xmls\//i;
 
 function isCanceled(nota: NotaFiscal): boolean {
   return CANCELED_STATUS.includes(String(nota.status_sefaz));
 }
 
-/** URL pública no R2 (bloqueada por CORS no fetch do browser). */
+/** URL pública (R2 ou Storage) — pode ser bloqueada por CORS no browser. */
 export function getDirectXmlUrl(nota: NotaFiscal): string | null {
   const canceled = isCanceled(nota);
   if (canceled && nota.cancelamento_xml_url) return nota.cancelamento_xml_url;
@@ -25,7 +25,7 @@ function getBackendXmlUrl(nota: NotaFiscal): string | null {
   return useCancelamento ? `${base}?tipo=cancelamento` : base;
 }
 
-/** Proxy same-origin (Vercel / Vite dev) para contornar CORS do R2. */
+/** Proxy same-origin (Vercel / Vite) para contornar CORS. */
 function getSameOriginXmlProxyUrl(directUrl: string): string {
   return `/api/xml-proxy?url=${encodeURIComponent(directUrl)}`;
 }
@@ -36,7 +36,8 @@ export function getXmlDownloadUrl(nota: NotaFiscal): string | null {
 
 export function buildXmlFileName(nota: NotaFiscal): string {
   const chave = nota.chave_acesso?.replace(/\D/g, '') || nota.id;
-  return `NFe_${nota.numero ?? 'SN'}_${chave}.xml`;
+  const prefix = nota.modelo === '65' ? 'NFCe' : 'NFe';
+  return `${prefix}_${nota.numero ?? 'SN'}_${chave}.xml`;
 }
 
 async function fetchWithUrl(url: string): Promise<Blob> {
@@ -58,8 +59,10 @@ export async function fetchXmlBlob(nota: NotaFiscal): Promise<Blob> {
   const backendUrl = getBackendXmlUrl(nota);
   if (backendUrl) attempts.push(backendUrl);
 
-  if (R2_XML_PATTERN.test(direct)) {
+  if (needsXmlProxy(direct)) {
     attempts.push(getSameOriginXmlProxyUrl(direct));
+  } else {
+    attempts.push(direct);
   }
 
   let lastError: Error | null = null;

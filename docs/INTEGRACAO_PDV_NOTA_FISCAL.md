@@ -270,3 +270,11 @@ Depois o app enriquece com `venda`, `empresas`, `clientes_cadastros`, `clientes_
 | Confec + PDV juntos | **Mesma tabela, mesmos campos, mesmos tenants** — sem tabela paralela |
 
 Não é necessário alterar o App Contador para “puxar do PDV”: basta o PDV gravar no contrato acima no banco compartilhado.
+
+## NFC-e (modelo 65) — handoff PDV
+
+Ver `docs/CONTADOR_NFCE_PDV_APARECER.md`.
+
+- Contador **não** filtra por `modelo` — NFC-e já entra na lista.
+- Card: se não houver `venda_id` e existir `pdv_venda_id`, exibe **Cupom PDV …**
+- Proxy `/api/xml-proxy`: R2 (`pub-*.r2.dev/nfe_xmls/…`) **e** Storage legado (`*.supabase.co/storage/v1/object/public/…`).

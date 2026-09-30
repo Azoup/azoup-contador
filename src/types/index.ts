@@ -39,6 +39,10 @@ export type NotaFiscal = {
   empresa_id: string | null;
   cliente_id: string | null;
   venda_id: number | null;
+  /** Cupom PDV (NFC-e); null nas NF-e do Confec. */
+  pdv_venda_id: string | null;
+  /** '55' NF-e | '65' NFC-e — Contador lista ambos. */
+  modelo: string | null;
   cliente_id_tenant: string;
   created_at: string;
 };
